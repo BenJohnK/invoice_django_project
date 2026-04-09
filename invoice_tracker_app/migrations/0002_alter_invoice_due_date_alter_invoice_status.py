@@ -6,18 +6,27 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('invoice_tracker_app', '0001_initial'),
+        ("invoice_tracker_app", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='invoice',
-            name='due_date',
+            model_name="invoice",
+            name="due_date",
             field=models.DateField(db_index=True),
         ),
         migrations.AlterField(
-            model_name='invoice',
-            name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('PAID', 'Paid'), ('OVERDUE', 'Overdue')], db_index=True, default='PENDING', max_length=10),
+            model_name="invoice",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("PENDING", "Pending"),
+                    ("PAID", "Paid"),
+                    ("OVERDUE", "Overdue"),
+                ],
+                db_index=True,
+                default="PENDING",
+                max_length=10,
+            ),
         ),
     ]

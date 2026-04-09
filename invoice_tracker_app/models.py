@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.db import transaction
+from decimal import Decimal
 
 # Create your models here.
 
@@ -26,22 +28,27 @@ class Invoice(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def total_amount(self):
-        return self.items.aggregate(total=models.Sum('amount'))['total'] or 0
+        return self.items.aggregate(total=models.Sum('amount'))['total'] or Decimal('0.00')
     
     def paid_amount(self):
-        return self.payments.aggregate(total=models.Sum('amount'))['total'] or 0
+        return self.payments.aggregate(total=models.Sum('amount'))['total'] or Decimal('0.00')
 
     def balance_amount(self):
         return self.total_amount() - self.paid_amount()
 
     def update_status(self):
+        new_status = self.status
+
         if self.paid_amount() >= self.total_amount():
-            self.status = 'PAID'
+            new_status = 'PAID'
         elif self.due_date < timezone.now().date():
-            self.status = 'OVERDUE'
+            new_status = 'OVERDUE'
         else:
-            self.status = 'PENDING'
-        self.save()
+            new_status = 'PENDING'
+
+        if new_status != self.status:
+            self.status = new_status
+            self.save(update_fields=['status'])
 
     def __str__(self):
         return f"Invoice {self.id} - {self.status}"
@@ -72,12 +79,15 @@ class Payment(models.Model):
     paid_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        if self.invoice.balance_amount() < self.amount:
-            raise ValidationError("Payment exceeds remaining balance")
-        
-        super().save(*args, **kwargs)
-        
-        self.invoice.update_status()
+        with transaction.atomic():
+            invoice = Invoice.objects.select_for_update().get(id=self.invoice.id)
+
+            if invoice.balance_amount() < self.amount:
+                raise ValidationError("Payment exceeds remaining balance")
+
+            super().save(*args, **kwargs)
+
+            invoice.update_status()
 
     def __str__(self):
         return f"Payment {self.transaction_id} - {self.amount}"

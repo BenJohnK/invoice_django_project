@@ -67,5 +67,4 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
         fields = ["id", "title", "description", "due_date"]
 
     def create(self, validated_data):
-        user = self.context["request"].user
-        return Invoice.objects.create(user=user, **validated_data)
+        return Invoice.objects.create(**validated_data)

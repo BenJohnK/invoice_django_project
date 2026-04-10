@@ -1,13 +1,8 @@
 from decimal import Decimal
 
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
-
-# Create your models here.
-
-User = get_user_model()
 
 
 class Invoice(models.Model):
@@ -17,9 +12,6 @@ class Invoice(models.Model):
         ("OVERDUE", "Overdue"),
     ]
 
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="invoices", db_index=True
-    )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
 
@@ -32,14 +24,10 @@ class Invoice(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def total_amount(self):
-        return self.items.aggregate(total=models.Sum("amount"))["total"] or Decimal(
-            "0.00"
-        )
+        return self.items.aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
 
     def paid_amount(self):
-        return self.payments.aggregate(total=models.Sum("amount"))["total"] or Decimal(
-            "0.00"
-        )
+        return self.payments.aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
 
     def balance_amount(self):
         return self.total_amount() - self.paid_amount()
